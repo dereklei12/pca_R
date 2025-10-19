@@ -91,7 +91,9 @@ jobs:
           set_max_fails(Inf)
 
           # Create test-results directory if it doesn't exist
-          test_results_dir <- "test/testthat/test-results"
+          # Use absolute path because test_file() changes working directory
+          project_root <- getwd()
+          test_results_dir <- file.path(project_root, "test/testthat/test-results")
           if (!dir.exists(test_results_dir)) {
             dir.create(test_results_dir, recursive = TRUE)
           }
