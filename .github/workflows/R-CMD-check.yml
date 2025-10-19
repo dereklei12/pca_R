@@ -117,11 +117,22 @@ jobs:
           print(test_results)
 
           # Verify test-results.xml was created
+          cat("\n=== Checking test results file ===\n")
+          cat("Expected output file:", output_file, "\n")
+          cat("Working directory:", getwd(), "\n")
+          cat("test-results directory exists:", dir.exists("test-results"), "\n")
+
+          if (dir.exists("test-results")) {
+            cat("Files in test-results/:\n")
+            print(list.files("test-results", full.names = TRUE))
+          }
+
           if (file.exists(output_file)) {
             cat("\n✓", output_file, "created successfully\n")
             cat("File size:", file.size(output_file), "bytes\n")
           } else {
             cat("\n✗ WARNING:", output_file, "was not created\n")
+            cat("This may indicate JunitReporter failed to write the file\n")
           }
 
           # Exit with error if tests failed
@@ -132,6 +143,20 @@ jobs:
             cat("\n✓ All tests PASSED\n")
           }
         shell: Rscript {0}
+
+      - name: Check test-results directory
+        if: always()
+        run: |
+          echo "=== Debugging: Checking test-results directory ==="
+          pwd
+          ls -la
+          if [ -d "test-results" ]; then
+            echo "test-results directory exists"
+            ls -la test-results/
+          else
+            echo "test-results directory does NOT exist"
+          fi
+        shell: bash
 
       - name: Commit test results
         if: always()

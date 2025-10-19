@@ -457,7 +457,7 @@ The test suite validates the following scenarios:
 
 9. **Cross-Platform Numerical Stability**: Ensures orthonormality of loadings, monotonicity of eigenvalues, and validity of variance proportions across different computing environments.
 
-All tests passed successfully, confirming that `pca_pSVD` is robust, reliable, and compatible with existing R PCA implementations. Continuous integration testing across multiple platforms (Ubuntu, Windows, macOS) is automated via [GitHub Actions](https://github.com/dereklei12/pca_R/actions).
+All tests passed successfully, confirming that `pca_pSVD` is robust, reliable, and compatible with existing R PCA implementations. Continuous integration testing across multiple platforms (Ubuntu, Windows, macOS) is automated; detailed results are available via [GitHub Actions](https://github.com/dereklei12/pca_R/actions).
 
 ## Limitations and Reproducibility
 
