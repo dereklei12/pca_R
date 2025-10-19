@@ -91,14 +91,15 @@ jobs:
           set_max_fails(Inf)
 
           # Create test-results directory if it doesn't exist
-          if (!dir.exists("test-results")) {
-            dir.create("test-results", recursive = TRUE)
+          test_results_dir <- "test/testthat/test-results"
+          if (!dir.exists(test_results_dir)) {
+            dir.create(test_results_dir, recursive = TRUE)
           }
 
           # Define output file with OS and R version info
           os_name <- "${{ matrix.config.os }}"
           r_version <- "${{ matrix.config.r }}"
-          output_file <- file.path("test-results", paste0("test-results-", os_name, "-", r_version, ".xml"))
+          output_file <- file.path(test_results_dir, paste0("test-results-", os_name, "-", r_version, ".xml"))
 
           # Run test-pca_pSVD.R only
           cat("\n=== Running test-pca_pSVD.R ===\n")
@@ -120,11 +121,11 @@ jobs:
           cat("\n=== Checking test results file ===\n")
           cat("Expected output file:", output_file, "\n")
           cat("Working directory:", getwd(), "\n")
-          cat("test-results directory exists:", dir.exists("test-results"), "\n")
+          cat("test-results directory exists:", dir.exists(test_results_dir), "\n")
 
-          if (dir.exists("test-results")) {
-            cat("Files in test-results/:\n")
-            print(list.files("test-results", full.names = TRUE))
+          if (dir.exists(test_results_dir)) {
+            cat("Files in test/testthat/test-results/:\n")
+            print(list.files(test_results_dir, full.names = TRUE))
           }
 
           if (file.exists(output_file)) {
@@ -150,11 +151,11 @@ jobs:
           echo "=== Debugging: Checking test-results directory ==="
           pwd
           ls -la
-          if [ -d "test-results" ]; then
-            echo "test-results directory exists"
-            ls -la test-results/
+          if [ -d "test/testthat/test-results" ]; then
+            echo "test/testthat/test-results directory exists"
+            ls -la test/testthat/test-results/
           else
-            echo "test-results directory does NOT exist"
+            echo "test/testthat/test-results directory does NOT exist"
           fi
         shell: bash
 
@@ -163,7 +164,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Add test results for ${{ matrix.config.os }} (R-${{ matrix.config.r }})"
-          file_pattern: "test-results/*.xml"
+          file_pattern: "test/testthat/test-results/*.xml"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
           commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
