@@ -78,6 +78,10 @@ run_pca_psvd <- function(X, k) {
 }
 ```
 
+Both run_pca_full() and run_pca_psvd() use the same centering and scaling scheme for fair comparison.
+
+pca_pSVD computes only the first k singular vectors using svds, theoretically equivalent to full SVD results (up to arbitrary sign flips).
+
 ## 2.1 Scree Plot Analysis
 
 ```{r scree-plot, fig.width=10, fig.height=4}
@@ -116,6 +120,10 @@ legend("bottomright",
 par(mfrow = c(1, 1))
 ```
 
+The scree plot flattens quickly, with individual PCs contributing \<1% variance beyond PC 10 — a hallmark of high-dimensional, sparse data.
+
+This visualization helps identify an effective k range (≈ 10–30 PCs) for benchmarking.
+
 ## 2.2 Variance Summary Table
 
 ```{r variance-table}
@@ -138,6 +146,8 @@ kable(var_summary,
       col.names = c("# PCs", "Cumulative Var.", "PC1 Contribution", "PC2 Contribution"))
 ```
 
+The table shows how cumulative variance grows with k (≈ 13.7% at 10 PCs, 17.8% at 20 PCs). These figures serve to contextualize computational comparisons, not to interpret biological variability.
+
 # 3. Determine Optimal k
 
 ```{r optimal-k}
@@ -158,6 +168,10 @@ cat("      which explains the low cumulative variance in the first 50 PCs.\n")
 cat("\nRecommendation: Use k = 20-30 for comprehensive exploration\n")
 cat("              Or k =", k_15, "for efficient analysis (15% variance)\n")
 ```
+
+Threshold-based selection (e.g., 10%, 15%, 20%, 25%) provides a reference for benchmarking at comparable representational capacities.
+
+k = 20–30 balances efficiency and interpretability, making it suitable for comparative runtime/accuracy evaluation.
 
 # 4. Performance Benchmark
 
@@ -204,6 +218,8 @@ kable(speed_tbl, digits = 3,
       caption = "Runtime & speedup of pca_pSVD vs full SVD",
       col.names = c("k", "Full PCA (s)", "pSVD (s)", "Speedup"))
 ```
+
+The speedup decreases from \~46× (k = 2) to \~17× (k = 20), reflecting that partial PCA’s efficiency is most pronounced for **low-rank approximations**.
 
 # 5. Accuracy Validation
 
@@ -286,6 +302,8 @@ ggplot(acc_res, aes(pc, abs_diff, color = method)) +
   theme(legend.position = "top")
 ```
 
+Absolute differences in explained variance between methods are near zero (≈ 1e⁻¹⁷), confirming that both yield **identical principal components** within numerical precision limits.
+
 # 6. Biological Interpretation
 
 ## Visual Comparison: mixOmics::pca vs pca_pSVD
@@ -344,6 +362,10 @@ if (have_mixOmics) {
 }
 ```
 
+The PC1–PC2 and PC2–PC3 scatterplots from both methods overlap nearly perfectly.
+
+Minor mirroring or rotation is caused by arbitrary sign differences and carries **no analytical significance**.
+
 # 7. Data Quality Metrics
 
 ```{r qc-metrics}
@@ -379,75 +401,45 @@ kable(qc_metrics, caption = "Data Quality Control Summary",
       col.names = c("Quality Metric", "Value"))
 ```
 
-```{=html}
-<!--# 8. Discussion
+This summary table contextualizes the benchmarking with basic data properties—cell/gene counts, sparsity, and explained variance.
 
-## 8.1 Key Findings
+Low cumulative variance is expected in single-cell data and does not imply low PCA quality.
 
-This comprehensive PCA analysis of the Haffina COVID PBMC scRNA-seq dataset reveals:
+# 8. Discussion
 
-**Data Characteristics:**
+This report compares **full PCA** (via mixOmics::pca) and **partial PCA** (pca_pSVD, implemented using partial SVD) in terms of **runtime**, **memory efficiency**, and **numerical accuracy** using a subset (ncell=1500, ngene=2000) of the *HaffinaCovidPBMC* single-cell dataset.
 
--   Dataset contains `r nrow(data2)` cells and `r ncol(data2)` genes after quality control
--   Data sparsity: `r round(zero_proportion * 100, 2)`%, typical for scRNA-seq data
--   PC1 explains `r round(pca_bio$prop_expl_var$X[1] * 100, 2)`% of variance
--   First `r k_80` PCs capture 80% of total variance
+## Speed and Memory Efficiency
 
-**Performance Comparison:**
+-   Under identical settings, partial PCA achieved **substantial speedups** compared to full PCA. For example, with k = 2/5/10/20, partial PCA was **\~46×, 37×, 25×, and 17× faster**, respectively.
 
--   `pca_pSVD` demonstrates consistent speedup over full SVD across all tested k values
--   Maximum speedup achieved: `r round(max(speed_tbl$speedup_pSVD, na.rm = TRUE), 2)`x at k = `r speed_tbl$ncomp[which.max(speed_tbl$speedup_pSVD)]`
--   Accuracy is maintained with negligible differences (max \|Δ\| \< `r format(max(acc_summary$max_abs_diff), scientific = TRUE, digits = 3)`)
+-   Memory usage was also reduced by nearly half (\~245 MB vs \~480 MB).
 
-**Biological Insights:**
+-   As expected, the **relative speedup decreases** as k increases, since truncated SVD loses efficiency when k approaches min(n, p).
 
--   Clear separation of cells visible in PC1-PC2 space suggests underlying biological heterogeneity
--   Top contributing genes identified for each PC may represent key biological pathways
--   `r if(exists("outliers")) paste(length(outliers), "potential outlier cells detected, representing", round(length(outliers)/nrow(data2)*100, 2), "% of data")`
+## Numerical Accuracy
 
-## 8.2 Methodological Considerations
+-   The **explained variance** difference between full PCA and partial PCA was at the **machine precision level (\~1e⁻¹⁷)**, confirming that partial PCA produces equivalent principal components.
 
-**Why multilevel analysis is not needed:**
+-   **Loadings correlation** between the two methods was nearly **1.0 (\|r\| ≥ 0.9999)** across all PCs, which is consistent with theoretical expectations (differences are limited to random sign flips).
 
-This dataset doesn't require multilevel analysis because each cell is an **independent sample** from a single snapshot measurement, with no repeated measures, paired design, or nested structure (e.g., multiple timepoints from the same patient).
+-   **Scatter plots (PC1–PC2, PC2–PC3)** produced visually indistinguishable results between both methods; small reflections or rotations correspond only to sign indeterminacy.
 
-**Implementation details:**
+## Practical Recommendations
 
-In `pca_pSVD.R`, CLR transformation is simplified to `"none"` since it preserves data dimensionality, while ILR is delegated to `mixOmics::pca` because it reduces dimensions (p → p-1) and requires complex contrast matrices that are beyond the scope of this efficient PCA implementation.
+-   When k ≪ min(n, p) or the matrix is sparse, **partial PCA is highly recommended**—it maintains identical results while significantly reducing compute time.
 
-**Performance expectations:**
+-   For very large k or convergence issues in svds, fallback to **full PCA** is appropriate.
 
--   When k ≪ min(n, p), `pca_pSVD` achieves significantly lower runtime than `pca_full`
--   Explained variance differences remain within numerical tolerance
--   Partial SVD (`svds`) is an iterative approximation; when k is too large or convergence fails, the implementation falls back to full `svd`
+-   In this experiment, cumulative variance explained by the first 50 PCs was **\~26.6%**, with **\~18–21% by 20–30 PCs**—typical for high-dimensional, sparse single-cell data. These values are contextual, not biological conclusions.
 
-**Limitations:**
+## Capability Test
 
--   `svds` is an iterative method and may not converge for ill-conditioned matrices
--   Missing values and ILR transformations are handled by delegating to `mixOmics::pca`
--   Sparse matrix optimization is most effective when data sparsity \> 50%
--   For k close to min(n, p), full SVD may be more efficient
+## Limitations and Reproducibility
 
-## 8.3 Recommendations
+-   Speedup depends on hardware, BLAS implementation, and data sparsity.
 
-**For routine analysis:**
-
-1.  Use k = `r k_80` to capture 80% variance efficiently
-2.  Monitor for outliers before downstream analysis (found `r if(exists("outliers")) length(outliers) else 0` potential outliers)
-3.  Consider log-transformation for scRNA-seq data if not already applied
-
-**For exploratory analysis:**
-
-1.  Use k = 20-30 to explore detailed structure
-2.  Examine gene loadings to identify biological drivers
-3.  Use mixOmics tools for advanced visualization and interpretation
-
-**For large-scale analysis:**
-
-1.  Use `pca_pSVD` with sparse matrix support for memory efficiency
-2.  Benchmark different k values to optimize speed-accuracy tradeoff
-3.  Consider batch processing if analyzing multiple datasets-->
-```
+-   Both methods were executed with identical preprocessing (center = TRUE, scale = TRUE) and a fixed random seed for reproducibility.
 
 # 9. Session Info
 

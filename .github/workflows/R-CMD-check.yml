@@ -75,6 +75,14 @@ jobs:
         run: |
           library(testthat)
 
+          # Load all R function files from R/ directory
+          cat("\n=== Loading R functions ===\n")
+          r_files <- list.files("R", pattern = "\\.R$", full.names = TRUE)
+          for (f in r_files) {
+            cat("Loading:", f, "\n")
+            source(f)
+          }
+
           # Show all failures
           set_max_fails(Inf)
 
@@ -93,6 +101,14 @@ jobs:
           # Display summary
           cat("\n=== Test Summary ===\n")
           print(test_results)
+
+          # Verify test-results.xml was created
+          if (file.exists("test-results.xml")) {
+            cat("\n✓ test-results.xml created successfully\n")
+            cat("File size:", file.size("test-results.xml"), "bytes\n")
+          } else {
+            cat("\n✗ WARNING: test-results.xml was not created\n")
+          }
 
           # Exit with error if tests failed
           if (any(as.data.frame(test_results)$failed > 0)) {
