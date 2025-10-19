@@ -86,6 +86,16 @@ jobs:
           # Show all failures
           set_max_fails(Inf)
 
+          # Create test-results directory if it doesn't exist
+          if (!dir.exists("test-results")) {
+            dir.create("test-results", recursive = TRUE)
+          }
+
+          # Define output file with OS and R version info
+          os_name <- "${{ matrix.config.os }}"
+          r_version <- "${{ matrix.config.r }}"
+          output_file <- file.path("test-results", paste0("test-results-", os_name, "-", r_version, ".xml"))
+
           # Run test-pca_pSVD.R only
           cat("\n=== Running test-pca_pSVD.R ===\n")
           test_results <- test_file(
@@ -93,7 +103,7 @@ jobs:
             reporter = MultiReporter$new(reporters = list(
               ProgressReporter$new(),
               FailReporter$new(),
-              JunitReporter$new(file = "test-results.xml")
+              JunitReporter$new(file = output_file)
             )),
             stop_on_failure = FALSE
           )
@@ -103,11 +113,11 @@ jobs:
           print(test_results)
 
           # Verify test-results.xml was created
-          if (file.exists("test-results.xml")) {
-            cat("\n✓ test-results.xml created successfully\n")
-            cat("File size:", file.size("test-results.xml"), "bytes\n")
+          if (file.exists(output_file)) {
+            cat("\n✓", output_file, "created successfully\n")
+            cat("File size:", file.size(output_file), "bytes\n")
           } else {
-            cat("\n✗ WARNING: test-results.xml was not created\n")
+            cat("\n✗ WARNING:", output_file, "was not created\n")
           }
 
           # Exit with error if tests failed
@@ -119,12 +129,15 @@ jobs:
           }
         shell: Rscript {0}
 
-      - name: Upload test results
+      - name: Commit test results
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ matrix.config.os }}-${{ matrix.config.r }}
-          path: test-results.xml
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add test-results/ || true
+          git commit -m "Add test results for ${{ matrix.config.os }} (R-${{ matrix.config.r }})" || echo "No changes to commit"
+          git pull --rebase
+          git push || echo "Push failed, may need manual intervention"
 
       # Run benchmark
       # - name: Run benchmark
