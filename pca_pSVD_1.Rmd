@@ -439,23 +439,23 @@ To ensure [`pca_pSVD`](https://github.com/dereklei12/pca_R/blob/main/R/pca_pSVD.
 
 The test suite validates the following scenarios:
 
-1. **Basic Functionality**: Verifies correct output structure, dimensions, and class inheritance (`pca_pSVD` and `pca`).
+1.  **Basic Functionality**: Verifies correct output structure, dimensions, and class inheritance (`pca_pSVD` and `pca`).
 
-2. **Consistency with Base R and mixOmics**: Compares results (singular values, variance explained, loadings) against `prcomp` and `mixOmics::pca`, accounting for sign ambiguity in PCA.
+2.  **Consistency with Base R and mixOmics**: Compares results (singular values, variance explained, loadings) against `prcomp` and `mixOmics::pca`, accounting for sign ambiguity in PCA.
 
-3. **Input Validation**: Tests handling of invalid inputs (non-numeric data, incorrect dimensions, invalid parameter values).
+3.  **Input Validation**: Tests handling of invalid inputs (non-numeric data, incorrect dimensions, invalid parameter values).
 
-4. **Sparse Matrix Support**: Validates compatibility with sparse matrix formats (`dgCMatrix`, `dgRMatrix`) from the `Matrix` package.
+4.  **Sparse Matrix Support**: Validates compatibility with sparse matrix formats (`dgCMatrix`, `dgRMatrix`) from the `Matrix` package.
 
-5. **Edge Cases**: Tests behavior with small, wide (n < p), and tall (n > p) matrices, as well as zero-variance columns.
+5.  **Edge Cases**: Tests behavior with small, wide (n \< p), and tall (n \> p) matrices, as well as zero-variance columns.
 
-6. **Centering and Scaling Options**: Verifies all combinations of `center` and `scale` parameters, including numeric vectors.
+6.  **Centering and Scaling Options**: Verifies all combinations of `center` and `scale` parameters, including numeric vectors.
 
-7. **Multilevel Analysis**: Confirms proper handling of repeated-measures designs and consistency with `mixOmics::pca` multilevel results.
+7.  **Multilevel Analysis**: Confirms proper handling of repeated-measures designs and consistency with `mixOmics::pca` multilevel results.
 
-8. **Fallback Mechanisms**: Tests graceful degradation when specialized SVD packages (`RSpectra`, `rARPACK`) are unavailable, and appropriate delegation to `mixOmics` for missing values or ILR transformations.
+8.  **Fallback Mechanisms**: Tests graceful degradation when specialized SVD packages (`RSpectra`, `rARPACK`) are unavailable, and appropriate delegation to `mixOmics` for missing values or ILR transformations.
 
-9. **Cross-Platform Numerical Stability**: Ensures orthonormality of loadings, monotonicity of eigenvalues, and validity of variance proportions across different computing environments.
+9.  **Cross-Platform Numerical Stability**: Ensures orthonormality of loadings, monotonicity of eigenvalues, and validity of variance proportions across different computing environments.
 
 All tests passed successfully, confirming that `pca_pSVD` is robust, reliable, and compatible with existing R PCA implementations. Continuous integration testing across multiple platforms (Ubuntu, Windows, macOS) is automated; detailed results are available via [GitHub Actions](https://github.com/dereklei12/pca_R/actions).
 

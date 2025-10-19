@@ -21,10 +21,6 @@ Efficient PCA implementations for large datasets, providing drop-in replacements
 ### Core dependencies
 ```r
 install.packages(c("testthat", "ggplot2", "dplyr", "tidyr", "knitr"))
-```
-
-### Optional (recommended)
-```r
 install.packages(c("RSpectra", "rARPACK", "Matrix"))
 BiocManager::install("mixOmics")
 ```
@@ -65,15 +61,14 @@ test_dir("test/testthat")
 │   └── R-CMD-check.yml         # CI/CD configuration
 ├── R/
 │   ├── pca_pSVD.R              # Partial SVD (main)
-│   ├── pca_asym.R              # Asymmetric optimization
-│   └── pca_em_woodbury.R       # EM-PPCA
+│   ├── pca_asym.R              # Asymmetric optimization (Experimental)
+│   └── pca_em_woodbury.R       # EM-PPCA(Experimental Undone)
 ├── test/testthat/
-│   ├── test-pca_pSVD.R         # Main tests (50+ cases)
+│   ├── test-pca_pSVD.R         # Main tests
 │   └── test-pca_woodbury.R     # EM-PPCA tests
 ├── Data/
 │   └── HaffinaCovidPBMC_30000cells_dense.rds
 ├── pca_pSVD.Rmd                # Benchmark report
-├── pca_pSVD_1.Rmd              # Analysis with scree plots
 └── README.md
 ```
 
