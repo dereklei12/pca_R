@@ -109,7 +109,12 @@
 #' @param center,scale same as base::scale
 #' @param max.iter,tol iterative svds/svd convergence parameters
 #' @param logratio one of c("none","CLR","ILR"); allows ignoring CLR/ILR
-#' @param multilevel aligns with mixOmics::pca interface (no additional processing)
+#' @param ilr.offset offset for ILR transformation (used when delegating to mixOmics)
+#' @param V matrix for ILR transformation (used when delegating to mixOmics)
+#' @param multilevel data.frame or matrix with a single column indicating repeated
+#'   measurements on each individual (subject ID). When provided, performs
+#'   within-subject variation decomposition to remove between-subject effects
+#'   before PCA analysis. Requires mixOmics package.
 #' @param verbose.call whether to save the call in the result
 #' @return list with class "pca" (aligned with mixOmics::pca)
 pca_pSVD <- function(X,
@@ -125,7 +130,9 @@ pca_pSVD <- function(X,
   logratio <- match.arg(logratio)
 
   if (is.data.frame(X)) X <- as.matrix(X)
-  if (!is.numeric(X)) stop("X must be a numeric matrix/data.frame.")
+  # Check if numeric or sparse matrix
+  is_sparse <- .is_sparse(X)
+  if (!is_sparse && !is.numeric(X)) stop("X must be a numeric matrix/data.frame.")
 
   n <- nrow(X)
   p <- ncol(X)
@@ -155,6 +162,36 @@ pca_pSVD <- function(X,
     )
   }
   if (identical(logratio, "CLR")) logratio <- "none"
+
+  ## -------- Multilevel handling --------
+  Xw <- NULL # Store within-variation matrix for output
+  if (!is.null(multilevel)) {
+    if (!requireNamespace("mixOmics", quietly = TRUE)) {
+      stop("multilevel analysis requires mixOmics package. Install mixOmics or set multilevel = NULL.")
+    }
+
+    # Convert to data.frame and validate
+    multilevel <- data.frame(multilevel)
+
+    if (nrow(X) != nrow(multilevel)) {
+      stop("unequal number of rows in 'X' and 'multilevel'.")
+    }
+
+    if (ncol(multilevel) != 1) {
+      stop("'multilevel' should have a single column for the repeated measurements.")
+    }
+
+    # Convert factor levels to numeric for subject IDs
+    multilevel[, 1] <- as.numeric(factor(multilevel[, 1]))
+
+    # Apply within-variation decomposition to remove between-subject effects
+    Xw <- mixOmics::withinVariation(X, design = multilevel)
+    X <- Xw
+
+    # Update dimensions after within-variation processing
+    n <- nrow(X)
+    p <- ncol(X)
+  }
 
   ## -------- Standardization --------
   prep <- .prepare_center_scale(X, center, scale)
@@ -292,6 +329,7 @@ pca_pSVD <- function(X,
     )
   }
 
+  # Assemble result list
   res <- list(
     call = if (isTRUE(verbose.call)) match.call() else match.call(expand.dots = FALSE)[1],
     X = X_field,
@@ -304,18 +342,22 @@ pca_pSVD <- function(X,
     variates = variates,
     prop_expl_var = list(X = as.numeric(prop)),
     var.tot = var.tot,
-    cum.var = as.numeric(cumvar), # mixOmics: numeric vector
+    cum.var = as.numeric(cumvar),
     rotation = rotation,
     x = x
   )
 
-  wanted <- c(
-    "call", "X", "ncomp", "center", "scale", "names",
-    "sdev", "loadings", "variates", "prop_expl_var", "var.tot", "cum.var",
-    "rotation", "x"
-  )
-  res <- res[wanted]
-  class(res) <- "pca"
-  if (!is.null(multilevel)) class(res) <- c("mlpca", class(res))
+  # Append multilevel-specific fields if applicable
+  if (!is.null(multilevel)) {
+    res <- c(res, list(Xw = Xw, design = multilevel))
+  }
+
+  # Set class hierarchy
+  class(res) <- if (!is.null(multilevel)) {
+    c("mlpca", "pca_pSVD", "pca")
+  } else {
+    c("pca_pSVD", "pca")
+  }
+
   res
 }

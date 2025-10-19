@@ -1,78 +1,57 @@
-# =============================================================================
 # GitHub Actions Workflow for Cross-Platform R Testing
-# 用于跨平台 R 代码测试的 GitHub Actions 工作流
-# =============================================================================
-#
-# 这个文件会在以下情况自动运行:
-# 1. 每次推送代码到 GitHub (push)
-# 2. 每次提交 Pull Request (pull_request)
-#
-# 它会在 3 个操作系统上测试您的代码: Ubuntu, Windows, macOS
 
 name: R-CMD-check
 
-# 触发条件: 什么时候运行这个测试
+# Trigger on push or pull request to main/master branches
 on:
   push:
-    branches: [main, master] # 推送到 main 或 master 分支时
+    branches: [main, master]
   pull_request:
-    branches: [main, master] # PR 到 main 或 master 分支时
+    branches: [main, master]
 
-# 任务定义
 jobs:
   R-CMD-check:
-    # 任务名称会显示在 GitHub 的界面上
     runs-on: ${{ matrix.config.os }}
 
     name: ${{ matrix.config.os }} (R-${{ matrix.config.r }})
 
-    # 矩阵策略: 在多个操作系统和 R 版本上测试
+    # Test on multiple OS platforms
     strategy:
-      fail-fast: false # 即使一个失败,其他继续运行
+      fail-fast: false
       matrix:
         config:
-          # 在 3 个操作系统上测试
           - { os: ubuntu-latest, r: "release" }
           - { os: windows-latest, r: "release" }
           - { os: macOS-latest, r: "release" }
 
-          # 可选: 也可以测试不同的 R 版本
-          # - {os: ubuntu-latest, r: 'devel'}
-          # - {os: ubuntu-latest, r: 'oldrel'}
-
-    # 环境变量
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
 
-    # 具体执行步骤
     steps:
-      # 步骤 1: 下载您的代码
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 步骤 2: 安装 R
       - name: Setup R
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
 
-      # 步骤 3: 安装系统依赖 (仅 Linux 需要)
+      # Linux only
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
 
-      # 步骤 4: 安装 R 包依赖
       - name: Install R dependencies
         run: |
           install.packages(c("testthat", "ggplot2", "dplyr", "tidyr", "knitr"))
           install.packages(c("remotes", "rcmdcheck"))
         shell: Rscript {0}
 
-      # 步骤 5: 尝试安装可选包 (允许失败)
+      # Optional packages - allowed to fail
       - name: Install optional packages
         continue-on-error: true
         run: |
@@ -85,7 +64,6 @@ jobs:
           install.packages("bench")
         shell: Rscript {0}
 
-      # 步骤 6: 显示会话信息 (用于调试)
       - name: Session info
         run: |
           options(width = 100)
@@ -93,15 +71,14 @@ jobs:
           sessioninfo::session_info(pkgs, include_base = TRUE)
         shell: Rscript {0}
 
-      # 步骤 7: 运行测试
       - name: Run tests
         run: |
           library(testthat)
 
-          # 允许显示所有失败,不限制数量
+          # Show all failures
           set_max_fails(Inf)
 
-          # 只运行 test-pca_pSVD.R 文件
+          # Run test-pca_pSVD.R only
           cat("\n=== Running test-pca_pSVD.R ===\n")
           test_results <- test_file(
             "test/testthat/test-pca_pSVD.R",
@@ -109,11 +86,11 @@ jobs:
             stop_on_failure = FALSE
           )
 
-          # 显示测试摘要
+          # Display summary
           cat("\n=== Test Summary ===\n")
           print(test_results)
 
-          # 如果有测试失败,退出码为 1
+          # Exit with error if tests failed
           if (any(as.data.frame(test_results)$failed > 0)) {
             cat("\n✗ Tests FAILED\n")
             quit(status = 1)
@@ -122,7 +99,6 @@ jobs:
           }
         shell: Rscript {0}
 
-      # 步骤 8: 上传测试结果 (即使测试失败也上传)
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -130,7 +106,7 @@ jobs:
           name: test-results-${{ matrix.config.os }}-${{ matrix.config.r }}
           path: test-results.xml
 
-      # 步骤 9: 运行 benchmark (可选)
+      # Run benchmark
       # - name: Run benchmark
       #   if: runner.os == 'Linux' # 只在 Linux 上运行,节省时间
       #   continue-on-error: true
