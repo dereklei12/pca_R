@@ -1,6 +1,6 @@
 # PCA with Partial SVD Implementation
 
-[![R-CMD-check](https://github.com/你的用户名/你的仓库名/workflows/R-CMD-check/badge.svg)](https://github.com/你的用户名/你的仓库名/actions)
+[![R-CMD-check](https://github.com/dereklei12/pca_R/workflows/R-CMD-check/badge.svg)](https://github.com/dereklei12/pca_R/actions)
 
 ## 项目简介
 
