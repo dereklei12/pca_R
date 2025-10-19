@@ -136,7 +136,8 @@ pca_pSVD <- function(X,
   sample.names <- rownames(X)
   if (is.null(sample.names)) sample.names <- paste0("sample_", seq_len(n))
   var.names <- colnames(X)
-  if (is.null(var.names)) var.names <- paste0("var_", seq_len(p))
+  # Use "V" prefix to match mixOmics::pca naming convention
+  if (is.null(var.names)) var.names <- paste0("V", seq_len(p))
 
   has_na <- anyNA(X)
   if (has_na || identical(logratio, "ILR")) {
@@ -269,9 +270,13 @@ pca_pSVD <- function(X,
 
   var.tot <- .var_tot_from_stats(X, Xs, n, cvec, svec, sparse)
   prop <- (sdev^2) / var.tot
+  names(prop) <- paste0("PC", seq_len(ncomp))
   cumvar <- cumsum(prop)
 
-  loadings <- list(X = rotation)
+  # Create loadings without rownames to match mixOmics::pca behavior
+  loadings_mat <- rotation
+  rownames(loadings_mat) <- NULL
+  loadings <- list(X = loadings_mat)
   variates <- list(X = x)
 
   # For mixOmics compatibility: dense path saves Xs; sparse path keeps original X with center/scale attributes

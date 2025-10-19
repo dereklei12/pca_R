@@ -3,7 +3,7 @@
 # ============================================================================
 
 # Load pca_pSVD function from R/ directory
-source("../../R/pca_pSVD.R")
+source(testthat::test_path("..", "..", "R", "pca_pSVD.R"))
 
 # ============================================================================
 # Cross-platform compatibility helpers
@@ -34,6 +34,7 @@ test_that("pca_pSVD basic structure & dimensions", {
   # x ≈ Xs %*% rotation
   Xs <- scale(X, center = out$center, scale = out$scale)
   x2 <- Xs %*% out$rotation
+  rownames(x2) <- rownames(out$x)
   expect_equal(out$x, x2, tolerance = 1e-7)
 })
 
@@ -71,25 +72,27 @@ test_that("pca_pSVD vs mixOmics::pca: sign-invariant loadings close", {
   out_psv <- pca_pSVD(X, ncomp = k, center = TRUE, scale = TRUE)
 
   # Variance proportion (sign-invariant)
-  expect_equal(out_psv$prop_expl_var$X, out_mx$prop_expl_var$X[1:k], tolerance = 1e-4)
+  expect_equal(unname(out_psv$prop_expl_var$X), unname(out_mx$prop_expl_var$X[1:k]), tolerance = 1e-4)
 
   # Loading vectors: correct for sign flips before comparison
   L1 <- out_mx$loadings$X[, 1:k, drop = FALSE]
   L2 <- out_psv$loadings$X[, 1:k, drop = FALSE]
-  L2 <- fix_sign(L2, L1)
 
-  # Only compare common variables (in case zero-variance columns were removed)
-  common <- intersect(rownames(L1), rownames(L2))
-  expect_gt(length(common), 0)
-  expect_equal(L2[common, ], L1[common, ], tolerance = 1e-3)
+  # Verify both have same dimensions (mixOmics loadings don't have rownames)
+  expect_equal(dim(L1), dim(L2))
+  expect_null(rownames(L1))
+  expect_null(rownames(L2))
+
+  # Apply sign correction and compare directly (no subsetting needed)
+  L2 <- fix_sign(L2, L1)
+  expect_equal(L2, L1, tolerance = 1e-3)
 })
 
 # ============================================================================
-# CLR transformation test (per assignment: treat CLR as "none")
+# CLR transformation test (treat CLR as "none")
 # ============================================================================
 
-test_that("CLR logratio is treated as 'none' (per assignment)", {
-  skip_if_not_installed("mixOmics")
+test_that("CLR logratio is treated as 'none'", {
   set.seed(99)
   X <- matrix(runif(2000, 0.1, 10), 100, 20) # Positive data for CLR
   k <- 5
@@ -158,7 +161,7 @@ test_that("results are numerically stable across platforms", {
   # 2. Loadings are orthonormal (within tolerance)
   loadings <- out$loadings$X
   gram <- t(loadings) %*% loadings
-  expect_equal(gram, diag(k), tolerance = 1e-6)
+  expect_equal(unname(gram), diag(k), tolerance = 1e-6)
 
   # 3. Variance proportions sum to <= 1
   expect_true(sum(out$prop_expl_var$X) <= 1 + 1e-10)
