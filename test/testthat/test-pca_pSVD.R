@@ -3,7 +3,7 @@
 # ============================================================================
 
 # Load pca_pSVD function from R/ directory
-source("R/pca_pSVD.R")
+source("../../R/pca_pSVD.R")
 
 # ============================================================================
 # Cross-platform compatibility helpers
