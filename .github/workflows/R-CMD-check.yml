@@ -90,57 +90,17 @@ jobs:
           # Show all failures
           set_max_fails(Inf)
 
-          # Create test-results directory if it doesn't exist
-          # Use absolute path because test_file() changes working directory
-          project_root <- getwd()
-          test_results_dir <- file.path(project_root, "test/testthat/test-results")
-          if (!dir.exists(test_results_dir)) {
-            dir.create(test_results_dir, recursive = TRUE)
-          }
-
-          # Define output file with OS and R version info
-          os_name <- "${{ matrix.config.os }}"
-          r_version <- "${{ matrix.config.r }}"
-          output_file <- file.path(test_results_dir, paste0("test-results-", os_name, "-", r_version, ".xml"))
-
           # Run test-pca_pSVD.R only
           cat("\n=== Running test-pca_pSVD.R ===\n")
-
-          # Define summary output file
-          summary_file <- file.path(test_results_dir, paste0("summary-", os_name, "-", r_version, ".txt"))
-
           test_results <- test_file(
             "test/testthat/test-pca_pSVD.R",
-            reporter = MultiReporter$new(reporters = list(
-              ProgressReporter$new(),
-              FailReporter$new(),
-              SummaryReporter$new(file = summary_file)
-            )),
+            reporter = c("progress", "fail"),
             stop_on_failure = FALSE
           )
 
           # Display summary
           cat("\n=== Test Summary ===\n")
           print(test_results)
-
-          # Verify test-results.xml was created
-          cat("\n=== Checking test results file ===\n")
-          cat("Expected output file:", output_file, "\n")
-          cat("Working directory:", getwd(), "\n")
-          cat("test-results directory exists:", dir.exists(test_results_dir), "\n")
-
-          if (dir.exists(test_results_dir)) {
-            cat("Files in test/testthat/test-results/:\n")
-            print(list.files(test_results_dir, full.names = TRUE))
-          }
-
-          if (file.exists(output_file)) {
-            cat("\n✓", output_file, "created successfully\n")
-            cat("File size:", file.size(output_file), "bytes\n")
-          } else {
-            cat("\n✗ WARNING:", output_file, "was not created\n")
-            cat("This may indicate JunitReporter failed to write the file\n")
-          }
 
           # Exit with error if tests failed
           if (any(as.data.frame(test_results)$failed > 0)) {
@@ -150,32 +110,6 @@ jobs:
             cat("\n✓ All tests PASSED\n")
           }
         shell: Rscript {0}
-
-      - name: Check test-results directory
-        if: always()
-        run: |
-          echo "=== Debugging: Checking test-results directory ==="
-          pwd
-          ls -la
-          if [ -d "test/testthat/test-results" ]; then
-            echo "test/testthat/test-results directory exists"
-            ls -la test/testthat/test-results/
-          else
-            echo "test/testthat/test-results directory does NOT exist"
-          fi
-        shell: bash
-
-      - name: Commit test results
-        if: always()
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Add test results for ${{ matrix.config.os }} (R-${{ matrix.config.r }})"
-          file_pattern: "test/testthat/test-results/*.txt"
-          commit_user_name: "github-actions[bot]"
-          commit_user_email: "github-actions[bot]@users.noreply.github.com"
-          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
-          skip_dirty_check: false
-          pull: "--rebase --autostash"
 
       # Run benchmark
       # - name: Run benchmark
