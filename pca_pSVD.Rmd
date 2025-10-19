@@ -6,6 +6,18 @@ output:
     df_print: paged
 ---
 
+-   [1. Data Preparation]
+-   [2. Exploratory Analysis]
+    -   [2.1 Scree Plot Analysis]
+    -   [2.2 Variance Summary Table]
+-   [3. Determine Optimal k]
+-   [4. Performance Benchmark]
+-   [5. Accuracy Validation]
+-   [6. Biological Interpretation]
+-   [7. Data Quality Metrics]
+-   [8. Discussion]
+-   [9. Session Info]
+
 ```{r setup, message=FALSE, warning=FALSE}
 set.seed(2025)
 suppressPackageStartupMessages({

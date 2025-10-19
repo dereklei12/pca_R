@@ -1626,6 +1626,23 @@ display: none;
 </div>
 
 
+<ul>
+<li><a href="#data-preparation">1. Data Preparation</a></li>
+<li><a href="#exploratory-analysis">2. Exploratory Analysis</a>
+<ul>
+<li><a href="#scree-plot-analysis">2.1 Scree Plot Analysis</a></li>
+<li><a href="#variance-summary-table">2.2 Variance Summary
+Table</a></li>
+</ul></li>
+<li><a href="#determine-optimal-k">3. Determine Optimal k</a></li>
+<li><a href="#performance-benchmark">4. Performance Benchmark</a></li>
+<li><a href="#accuracy-validation">5. Accuracy Validation</a></li>
+<li><a href="#biological-interpretation">6. Biological
+Interpretation</a></li>
+<li><a href="#data-quality-metrics">7. Data Quality Metrics</a></li>
+<li><a href="#discussion">8. Discussion</a></li>
+<li><a href="#session-info">9. Session Info</a></li>
+</ul>
 <pre class="r"><code>set.seed(2025)
 suppressPackageStartupMessages({
   library(ggplot2)
@@ -1925,14 +1942,14 @@ print(bench_res)</code></pre>
 <pre><code>## # A tibble: 8 × 4
 ##   ncomp method   time_s       mem
 ##   &lt;dbl&gt; &lt;chr&gt;     &lt;dbl&gt;     &lt;dbl&gt;
-## 1     2 pca_full  7.52  479374888
-## 2     2 pca_pSVD  0.149 246285128
+## 1     2 pca_full  7.44  479374888
+## 2     2 pca_pSVD  0.147 246285128
 ## 3     5 pca_full  7.52  479440688
-## 4     5 pca_pSVD  0.206 244797856
-## 5    10 pca_full  7.58  479560888
-## 6    10 pca_pSVD  0.294 244978256
-## 7    20 pca_full  7.64  479802328
-## 8    20 pca_pSVD  0.460 245341552</code></pre>
+## 4     5 pca_pSVD  0.203 244797856
+## 5    10 pca_full  7.50  479560888
+## 6    10 pca_pSVD  0.286 244978256
+## 7    20 pca_full  7.49  479802328
+## 8    20 pca_pSVD  0.443 245341552</code></pre>
 <pre class="r"><code>speed_tbl &lt;- bench_res %&gt;%
   select(ncomp, method, time_s) %&gt;%
   pivot_wider(names_from = method, values_from = time_s) %&gt;%
@@ -1955,27 +1972,27 @@ kable(speed_tbl, digits = 3,
 <tbody>
 <tr class="odd">
 <td align="right">2</td>
-<td align="right">7.523</td>
-<td align="right">0.149</td>
-<td align="right">50.421</td>
+<td align="right">7.440</td>
+<td align="right">0.147</td>
+<td align="right">50.632</td>
 </tr>
 <tr class="even">
 <td align="right">5</td>
-<td align="right">7.518</td>
-<td align="right">0.206</td>
-<td align="right">36.474</td>
+<td align="right">7.523</td>
+<td align="right">0.203</td>
+<td align="right">37.144</td>
 </tr>
 <tr class="odd">
 <td align="right">10</td>
-<td align="right">7.581</td>
-<td align="right">0.294</td>
-<td align="right">25.749</td>
+<td align="right">7.498</td>
+<td align="right">0.286</td>
+<td align="right">26.222</td>
 </tr>
 <tr class="even">
 <td align="right">20</td>
-<td align="right">7.637</td>
-<td align="right">0.460</td>
-<td align="right">16.584</td>
+<td align="right">7.495</td>
+<td align="right">0.443</td>
+<td align="right">16.900</td>
 </tr>
 </tbody>
 </table>
