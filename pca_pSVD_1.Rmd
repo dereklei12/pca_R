@@ -433,7 +433,31 @@ This report compares **full PCA** (via mixOmics::pca) and **partial PCA** (pca_p
 
 -   In this experiment, cumulative variance explained by the first 50 PCs was **\~26.6%**, with **\~18–21% by 20–30 PCs**—typical for high-dimensional, sparse single-cell data. These values are contextual, not biological conclusions.
 
-## Capability Test
+## Compatibility Test
+
+To ensure `pca_pSVD` produces reliable and consistent results across different platforms and environments, a test suite was developed using the `testthat` framework. The complete test file is available at: [test-pca_pSVD.R](https://github.com/dereklei12/pca_R/blob/main/test/testthat/test-pca_pSVD.R).
+
+The test suite validates the following scenarios:
+
+1. **Basic Functionality**: Verifies correct output structure, dimensions, and class inheritance (`pca_pSVD` and `pca`).
+
+2. **Consistency with Base R and mixOmics**: Compares results (singular values, variance explained, loadings) against `prcomp` and `mixOmics::pca`, accounting for sign ambiguity in PCA.
+
+3. **Input Validation**: Tests handling of invalid inputs (non-numeric data, incorrect dimensions, invalid parameter values).
+
+4. **Sparse Matrix Support**: Validates compatibility with sparse matrix formats (`dgCMatrix`, `dgRMatrix`) from the `Matrix` package.
+
+5. **Edge Cases**: Tests behavior with small, wide (n < p), and tall (n > p) matrices, as well as zero-variance columns.
+
+6. **Centering and Scaling Options**: Verifies all combinations of `center` and `scale` parameters, including numeric vectors.
+
+7. **Multilevel Analysis**: Confirms proper handling of repeated-measures designs and consistency with `mixOmics::pca` multilevel results.
+
+8. **Fallback Mechanisms**: Tests graceful degradation when specialized SVD packages (`RSpectra`, `rARPACK`) are unavailable, and appropriate delegation to `mixOmics` for missing values or ILR transformations.
+
+9. **Cross-Platform Numerical Stability**: Ensures orthonormality of loadings, monotonicity of eigenvalues, and validity of variance proportions across different computing environments.
+
+All tests passed successfully, confirming that `pca_pSVD` is robust, reliable, and compatible with existing R PCA implementations. Continuous integration testing across multiple platforms (Ubuntu, Windows, macOS) is automated via [GitHub Actions](https://github.com/dereklei12/pca_R/actions).
 
 ## Limitations and Reproducibility
 
