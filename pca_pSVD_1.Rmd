@@ -1,6 +1,9 @@
 ---
-title: "R Notebook"
-output: pdf_document
+title: "PCA/Partial PCA for scRNA-seq Data"
+author: "Ziqi Lei"
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, message=FALSE, warning=FALSE}
@@ -16,16 +19,16 @@ have_bench <- requireNamespace("bench", quietly = TRUE)
 have_mixOmics <- requireNamespace("mixOmics", quietly = TRUE)
 ```
 
-# Data
+# 1. Data Preparation
 
-```{r}
+```{r data-loading}
 data = readRDS(file = 'Data/HaffinaCovidPBMC_30000cells_dense.rds')
 data = t(data)
-dim(data)
+cat("Original data dimensions:", nrow(data), "cells x", ncol(data), "genes\n")
 
 # Subset the data to a specified size
-ncell = 2000          # choose number of cells, do not go above 2000
-ngene = 5000          # choose the number of genes, do not go above 5000
+ncell = 1500          # choose number of cells, do not go above 2000
+ngene = 2000          # choose the number of genes, do not go above 5000
 
 set.seed(2021)
 index.cell = sample(rownames(data), replace = FALSE, size = ncell)
@@ -34,27 +37,36 @@ data2 = data[index.cell, 1:ngene]
 # remove genes with 0 variance
 gene.var = apply(data2, 2, var)
 var.zero = which(gene.var == 0)
-length(var.zero)
+cat("Genes with zero variance:", length(var.zero), "\n")
 ```
 
-```{r}
+```{r data-cleaning}
 # create the data ready to be analysed
 data2 = data2[, setdiff(colnames(data2), names(var.zero))]
 dim(data2) # data ready to be input in PCA
 ```
 
-```{r}
+```{r data-summary}
 # Check data sparsity
 zero_proportion <- sum(data2 == 0) / length(data2)
 cat("Zero proportion:", round(zero_proportion * 100, 2), "%\n")
 cat("Data class:", class(data2), "\n")
 cat("Data dimensions:", nrow(data2), "cells x", ncol(data2), "genes\n")
 cat("Non-zero proportion:", round((1 - zero_proportion) * 100, 2), "%\n")
+
+# Summary statistics
+cat("\nGene expression summary:\n")
+cat("  Mean expression:", round(mean(data2), 4), "\n")
+cat("  Median expression:", round(median(data2), 4), "\n")
+cat("  Max expression:", round(max(data2), 2), "\n")
+cat("  SD:", round(sd(data2), 4), "\n")
 ```
 
-# Methods
+# 2. Exploratory Analysis
 
-```{r}
+Define methods for PCA:
+
+```{r methods}
 source("R/pca_pSVD.R")
 
 run_pca_full <- function(X, k) {
@@ -66,9 +78,90 @@ run_pca_psvd <- function(X, k) {
 }
 ```
 
-# Benchmark
+## 2.1 Scree Plot Analysis
 
-```{r}
+```{r scree-plot, fig.width=10, fig.height=4}
+# Run PCA with max components to explore variance
+k_max = min(50, min(nrow(data2), ncol(data2)) - 1)
+pca_explore = run_pca_full(data2, k = k_max)
+
+var_explained = pca_explore$prop_expl_var$X
+cumvar = cumsum(var_explained)
+
+# Create scree plots
+par(mfrow = c(1, 2))
+
+# Individual variance explained
+plot(var_explained, type = "b", pch = 19, col = "steelblue",
+     xlab = "Principal Component",
+     ylab = "Proportion of Variance Explained",
+     main = "Scree Plot",
+     cex = 0.8)
+abline(h = 0.01, col = "red", lty = 2, lwd = 1.5)
+text(k_max * 0.7, 0.012, "1% threshold", col = "red", cex = 0.8)
+
+# Cumulative variance explained
+plot(cumvar, type = "b", pch = 19, col = "darkgreen",
+     xlab = "Principal Component",
+     ylab = "Cumulative Variance Explained",
+     main = "Cumulative Variance Plot",
+     cex = 0.8, ylim = c(0, 1))
+abline(h = c(0.5, 0.8, 0.9), col = c("orange", "red", "purple"),
+       lty = 2, lwd = 1.5)
+legend("bottomright",
+       legend = c("50%", "80%", "90%"),
+       col = c("orange", "red", "purple"),
+       lty = 2, bty = "n", cex = 0.8)
+
+par(mfrow = c(1, 1))
+```
+
+## 2.2 Variance Summary Table
+
+```{r variance-table}
+# Key variance statistics
+selected_pcs = c(2, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50)
+var_summary = data.frame(
+  nPC = selected_pcs,
+  CumulativeVar = round(cumvar[selected_pcs] * 100, 2),
+  PC1_contribution = round(var_explained[1] * 100, 2),
+  PC2_contribution = round(var_explained[2] * 100, 2)
+)
+var_summary$CumulativeVar = paste0(var_summary$CumulativeVar, "%")
+var_summary$PC1_contribution[2:length(selected_pcs)] = ""
+var_summary$PC2_contribution[2:length(selected_pcs)] = ""
+var_summary$PC1_contribution[1] = paste0(var_summary$PC1_contribution[1], "%")
+var_summary$PC2_contribution[1] = paste0(var_summary$PC2_contribution[1], "%")
+
+kable(var_summary,
+      caption = "Cumulative variance explained by different numbers of PCs",
+      col.names = c("# PCs", "Cumulative Var.", "PC1 Contribution", "PC2 Contribution"))
+```
+
+# 3. Determine Optimal k
+
+```{r optimal-k}
+# Find number of PCs to explain different variance thresholds
+k_10 = which(cumvar >= 0.10)[1]
+k_15 = which(cumvar >= 0.15)[1]
+k_20 = which(cumvar >= 0.20)[1]
+k_25 = which(cumvar >= 0.25)[1]
+
+cat("Number of PCs needed to explain:\n")
+cat("  10% variance:", k_10, "PCs\n")
+cat("  15% variance:", k_15, "PCs\n")
+cat("  20% variance:", k_20, "PCs\n")
+cat("  25% variance:", k_25, "PCs\n")
+cat("\nMaximum variance explained by", k_max, "PCs:",
+    round(cumvar[k_max] * 100, 2), "%\n")
+cat("      which explains the low cumulative variance in the first 50 PCs.\n")
+cat("\nRecommendation: Use k = 20-30 for comprehensive exploration\n")
+cat("              Or k =", k_15, "for efficient analysis (15% variance)\n")
+```
+
+# 4. Performance Benchmark
+
+```{r benchmark-run}
 ks <- c(2, 5, 10, 20)
 
 bench_one <- function(k) {
@@ -76,7 +169,7 @@ bench_one <- function(k) {
     b <- bench::mark(
       pca_full   = { run_pca_full(data2, k) },
       pca_pSVD   = { run_pca_psvd(data2, k) },
-      iterations = 1, check = FALSE
+      iterations = 3, check = FALSE
     )
     tibble::tibble(
       ncomp = k,
@@ -97,71 +190,267 @@ bench_one <- function(k) {
 }
 
 bench_res <- dplyr::bind_rows(lapply(ks, bench_one))
-bench_res
-
+print(bench_res)
 ```
 
-```{r}
-ggplot(bench_res, aes(ncomp, time_s, group = method, linetype = method)) +
-  geom_line() + geom_point() +
-  labs(x = "Number of components (k)", y = "Time (s)", linetype = "Method") +
-  theme_minimal(base_size = 12)
-
-```
-
-```{r}
-speed_tbl <- bench_res |>
-  select(ncomp, method, time_s) |>
-  pivot_wider(names_from = method, values_from = time_s) |>
-  mutate(speedup_pSVD = `pca_full` / `pca_pSVD`) |>
+```{r speedup-table}
+speed_tbl <- bench_res %>%
+  select(ncomp, method, time_s) %>%
+  pivot_wider(names_from = method, values_from = time_s) %>%
+  mutate(speedup_pSVD = `pca_full` / `pca_pSVD`) %>%
   arrange(ncomp)
 
-kable(speed_tbl, digits = 3, caption = "Runtime & speedups vs full SVD")
+kable(speed_tbl, digits = 3,
+      caption = "Runtime & speedup of pca_pSVD vs full SVD",
+      col.names = c("k", "Full PCA (s)", "pSVD (s)", "Speedup"))
 ```
 
-# Accuracy
+# 5. Accuracy Validation
 
-```{r}
+```{r accuracy-check}
 cmp_one <- function(k) {
   f <- run_pca_full(data2, k)
   p <- run_pca_psvd(data2, k)
   tibble::tibble(
-    ncomp = rep(k, 1*k),
-    method = rep(c("pca_pSVD"), each = k),
-    pc = rep(seq_len(k), times = 1),
-    abs_diff = c(abs(f$prop_expl_var$X[1:k] - p$prop_expl_var$X[1:k]))
+    ncomp = rep(k, k),
+    method = rep("pca_pSVD", k),
+    pc = seq_len(k),
+    abs_diff = abs(f$prop_expl_var$X[1:k] - p$prop_expl_var$X[1:k])
   )
 }
 
 acc_res <- dplyr::bind_rows(lapply(ks, cmp_one))
-acc_res %>% group_by(ncomp, method) %>% summarise(max_abs_diff = max(abs_diff), .groups = "drop")
+acc_summary = acc_res %>%
+  group_by(ncomp, method) %>%
+  summarise(
+    max_abs_diff = max(abs_diff),
+    mean_abs_diff = mean(abs_diff),
+    .groups = "drop"
+  )
 
+kable(acc_summary, digits = 10,
+      caption = "Accuracy: Maximum and mean absolute differences in explained variance",
+      col.names = c("k", "Method", "Max |Δ|", "Mean |Δ|"))
 ```
 
-```{r}
-ggplot(acc_res, aes(pc, abs_diff, color = method, linetype = method)) +
-  geom_line() + geom_point(size = 1.6) +
+```{r loading-consistency}
+# Check loading consistency between pca_full and pca_pSVD
+
+cmp_loadings <- function(k) {
+  f <- run_pca_full(data2, k)
+  p <- run_pca_psvd(data2, k)
+
+  # Compute correlation for each PC (absolute value accounts for sign flips)
+  loading_corr <- sapply(1:k, function(i) {
+    cor(f$loadings$X[, i], p$loadings$X[, i])
+  })
+
+  tibble::tibble(
+    ncomp = k,
+    pc = 1:k,
+    correlation = loading_corr,
+    abs_correlation = abs(loading_corr)
+  )
+}
+
+loading_res <- dplyr::bind_rows(lapply(ks, cmp_loadings))
+
+# Summary statistics
+loading_summary <- loading_res %>%
+  group_by(ncomp) %>%
+  summarise(
+    min_abs_corr = min(abs_correlation),
+    mean_abs_corr = mean(abs_correlation),
+    max_abs_corr = max(abs_correlation),
+    all_near_1 = all(abs_correlation > 0.9999),
+    .groups = "drop"
+  )
+
+kable(loading_summary, digits = 10,
+      caption = "Loading consistency: Correlation between pca_full and pca_pSVD loadings",
+      col.names = c("k", "Min |r|", "Mean |r|", "Max |r|", "All ≥ 0.9999"))
+```
+
+```{r accuracy-plot, fig.width=10, fig.height=6}
+ggplot(acc_res, aes(pc, abs_diff, color = method)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 2) +
   facet_wrap(~ ncomp, scales = "free_x", ncol = 2) +
   scale_y_continuous(labels = scales::scientific) +
-  labs(x = "PC index", y = "Absolute difference in explained variance",
-       color = "Method", linetype = "Method",
-       title = "Explained-variance differences vs full PCA") +
-  theme_minimal(base_size = 12)
-
+  scale_color_manual(values = c("pca_pSVD" = "steelblue")) +
+  labs(x = "PC index",
+       y = "Absolute difference in explained variance",
+       color = "Method",
+       title = "Accuracy: Explained Variance Differences vs Full PCA") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top")
 ```
 
-# Discussion
+# 6. Biological Interpretation
 
-This dataset doesn't need multilevel analysis because each cell is an **independent sample** from a single snapshot measurement, with no repeated measures, paired design, or nested structure (e.g., multiple timepoints from the same patient).
+## Visual Comparison: mixOmics::pca vs pca_pSVD
 
-In pca_pSVD.R, CLR is simplified to `"none"` since it preserves data dimensionality, while ILR is delegated to `mixOmics::pca` because it reduces dimensions (p → p-1) and requires complex contrast matrices that are beyond the scope of this efficient PCA implementation.
+```{r bio-comparison, fig.width=12, fig.height=10}
+if (have_mixOmics) {
+  cat("Comparing visualization between mixOmics::pca and pca_pSVD...\n\n")
 
--   预期：当 `k ≪ min(n, p)` 时，`pca_pSVD` 的时间显著低于 `pca_full`；解释率差异应在数值容忍范围内。
+  # Run both methods with k=20
+  k_bio = 20
+  pca_full = run_pca_full(data2, k = k_bio)
+  pca_psvd = run_pca_psvd(data2, k = k_bio)
 
--   局限：`svds` 为迭代近似；当 `k` 过大或收敛失败时已回退到 `svd`。缺失值/ILR 分支仍由原 `pca()` 处理。
+  # Set up 2x2 layout for comparison
+  par(mfrow = c(2, 2))
 
-# Session Info
+  # mixOmics::pca - PC1 vs PC2
+  mixOmics::plotIndiv(pca_full,
+                      comp = c(1, 2),
+                      ind.names = FALSE,
+                      title = "mixOmics::pca - PC1 vs PC2",
+                      pch = 16,
+                      cex = 1.2,
+                      col = "steelblue")
 
-```{r}
+  # pca_pSVD - PC1 vs PC2
+  mixOmics::plotIndiv(pca_psvd,
+                      comp = c(1, 2),
+                      ind.names = FALSE,
+                      title = "pca_pSVD - PC1 vs PC2",
+                      pch = 16,
+                      cex = 1.2,
+                      col = "coral")
+
+  # mixOmics::pca - PC2 vs PC3
+  mixOmics::plotIndiv(pca_full,
+                      comp = c(2, 3),
+                      ind.names = FALSE,
+                      title = "mixOmics::pca - PC2 vs PC3",
+                      pch = 16,
+                      cex = 1.2,
+                      col = "steelblue")
+
+  # pca_pSVD - PC2 vs PC3
+  mixOmics::plotIndiv(pca_psvd,
+                      comp = c(2, 3),
+                      ind.names = FALSE,
+                      title = "pca_pSVD - PC2 vs PC3",
+                      pch = 16,
+                      cex = 1.2,
+                      col = "coral")
+
+  par(mfrow = c(1, 1))
+} else {
+  cat("mixOmics package not available. Skipping visualization comparison.\n")
+}
+```
+
+# 7. Data Quality Metrics
+
+```{r qc-metrics}
+# Calculate data quality metrics based on exploratory analysis
+qc_metrics = data.frame(
+  Metric = c(
+    "Total cells analyzed",
+    "Total genes analyzed",
+    "Data sparsity (%)",
+    "Mean gene expression",
+    "Variance explained by PC1 (%)",
+    "Variance explained by PC1-5 (%)",
+    "Variance explained by PC1-10 (%)",
+    "Variance explained by PC1-20 (%)",
+    "Variance explained by PC1-50 (%)",
+    "Estimated optimal k (15% var.)"
+  ),
+  Value = c(
+    nrow(data2),
+    ncol(data2),
+    round(zero_proportion * 100, 2),
+    round(mean(data2), 4),
+    round(var_explained[1] * 100, 2),
+    round(sum(var_explained[1:5]) * 100, 2),
+    round(sum(var_explained[1:10]) * 100, 2),
+    round(sum(var_explained[1:20]) * 100, 2),
+    round(cumvar[k_max] * 100, 2),
+    k_15
+  )
+)
+
+kable(qc_metrics, caption = "Data Quality Control Summary",
+      col.names = c("Quality Metric", "Value"))
+```
+
+```{=html}
+<!--# 8. Discussion
+
+## 8.1 Key Findings
+
+This comprehensive PCA analysis of the Haffina COVID PBMC scRNA-seq dataset reveals:
+
+**Data Characteristics:**
+
+-   Dataset contains `r nrow(data2)` cells and `r ncol(data2)` genes after quality control
+-   Data sparsity: `r round(zero_proportion * 100, 2)`%, typical for scRNA-seq data
+-   PC1 explains `r round(pca_bio$prop_expl_var$X[1] * 100, 2)`% of variance
+-   First `r k_80` PCs capture 80% of total variance
+
+**Performance Comparison:**
+
+-   `pca_pSVD` demonstrates consistent speedup over full SVD across all tested k values
+-   Maximum speedup achieved: `r round(max(speed_tbl$speedup_pSVD, na.rm = TRUE), 2)`x at k = `r speed_tbl$ncomp[which.max(speed_tbl$speedup_pSVD)]`
+-   Accuracy is maintained with negligible differences (max \|Δ\| \< `r format(max(acc_summary$max_abs_diff), scientific = TRUE, digits = 3)`)
+
+**Biological Insights:**
+
+-   Clear separation of cells visible in PC1-PC2 space suggests underlying biological heterogeneity
+-   Top contributing genes identified for each PC may represent key biological pathways
+-   `r if(exists("outliers")) paste(length(outliers), "potential outlier cells detected, representing", round(length(outliers)/nrow(data2)*100, 2), "% of data")`
+
+## 8.2 Methodological Considerations
+
+**Why multilevel analysis is not needed:**
+
+This dataset doesn't require multilevel analysis because each cell is an **independent sample** from a single snapshot measurement, with no repeated measures, paired design, or nested structure (e.g., multiple timepoints from the same patient).
+
+**Implementation details:**
+
+In `pca_pSVD.R`, CLR transformation is simplified to `"none"` since it preserves data dimensionality, while ILR is delegated to `mixOmics::pca` because it reduces dimensions (p → p-1) and requires complex contrast matrices that are beyond the scope of this efficient PCA implementation.
+
+**Performance expectations:**
+
+-   When k ≪ min(n, p), `pca_pSVD` achieves significantly lower runtime than `pca_full`
+-   Explained variance differences remain within numerical tolerance
+-   Partial SVD (`svds`) is an iterative approximation; when k is too large or convergence fails, the implementation falls back to full `svd`
+
+**Limitations:**
+
+-   `svds` is an iterative method and may not converge for ill-conditioned matrices
+-   Missing values and ILR transformations are handled by delegating to `mixOmics::pca`
+-   Sparse matrix optimization is most effective when data sparsity \> 50%
+-   For k close to min(n, p), full SVD may be more efficient
+
+## 8.3 Recommendations
+
+**For routine analysis:**
+
+1.  Use k = `r k_80` to capture 80% variance efficiently
+2.  Monitor for outliers before downstream analysis (found `r if(exists("outliers")) length(outliers) else 0` potential outliers)
+3.  Consider log-transformation for scRNA-seq data if not already applied
+
+**For exploratory analysis:**
+
+1.  Use k = 20-30 to explore detailed structure
+2.  Examine gene loadings to identify biological drivers
+3.  Use mixOmics tools for advanced visualization and interpretation
+
+**For large-scale analysis:**
+
+1.  Use `pca_pSVD` with sparse matrix support for memory efficiency
+2.  Benchmark different k values to optimize speed-accuracy tradeoff
+3.  Consider batch processing if analyzing multiple datasets-->
+```
+
+# 9. Session Info
+
+```{r session-info}
 sessionInfo()
 ```

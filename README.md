@@ -2,67 +2,88 @@
 
 [![R-CMD-check](https://github.com/dereklei12/pca_R/workflows/R-CMD-check/badge.svg)](https://github.com/dereklei12/pca_R/actions)
 
-## 项目简介
+## Overview
 
-改进 mixOmics 中的 PCA 实现,使用 partial SVD (rARPACK::svds) 提升大数据集的计算效率。
+Efficient PCA implementations for large datasets, providing drop-in replacements for `mixOmics::pca` with improved performance using partial SVD methods.
 
-## 跨平台测试
+- **pca_pSVD**: Partial SVD for general use (fastest when `k << min(n,p)`)
 
-本项目使用 GitHub Actions 在以下平台自动测试:
+## Key Features
 
-- ✅ Ubuntu (Linux)
-- ✅ Windows
-- ✅ macOS
+- High performance on large datasets (tested on 30,000+ cell scRNA-seq data)
+- Native sparse matrix support (`dgCMatrix`, `dgRMatrix`)
+- Full compatibility with `mixOmics::pca` output format
+- Cross-platform tested (Ubuntu, Windows, macOS)
+- 50+ comprehensive test cases
 
-## 安装依赖
+## Installation
 
+### Core dependencies
 ```r
 install.packages(c("testthat", "ggplot2", "dplyr", "tidyr", "knitr"))
-install.packages("rARPACK")
+```
+
+### Optional (recommended)
+```r
+install.packages(c("RSpectra", "rARPACK", "Matrix"))
 BiocManager::install("mixOmics")
 ```
 
-## 运行测试
+## Quick Start
+
+```r
+# Load function
+source("R/pca_pSVD.R")
+
+# Basic usage
+pca_result <- pca_pSVD(
+    X = your_data,
+    ncomp = 10,
+    center = TRUE,
+    scale = TRUE
+)
+
+# Access results
+pca_result$x                    # Scores
+pca_result$rotation             # Loadings
+pca_result$sdev                 # Standard deviations
+pca_result$prop_expl_var$X      # Variance explained
+```
+
+## Running Tests
 
 ```r
 library(testthat)
 test_dir("test/testthat")
 ```
 
-## 项目结构
+## Project Structure
 
 ```
 .
-├── .github/
-│   └── workflows/
-│       └── R-CMD-check.yml    # GitHub Actions 配置
+├── .github/workflows/
+│   └── R-CMD-check.yml         # CI/CD configuration
 ├── R/
-│   ├── pca_pSVD.R             # 核心实现
-│   ├── pca_asym.R
-│   └── pca_em_woodbury.R
-├── test/
-│   └── testthat/
-│       ├── test-pca_pSVD.R    # 单元测试
-│       └── test-pca_woodbury.R
+│   ├── pca_pSVD.R              # Partial SVD (main)
+│   ├── pca_asym.R              # Asymmetric optimization
+│   └── pca_em_woodbury.R       # EM-PPCA
+├── test/testthat/
+│   ├── test-pca_pSVD.R         # Main tests (50+ cases)
+│   └── test-pca_woodbury.R     # EM-PPCA tests
 ├── Data/
 │   └── HaffinaCovidPBMC_30000cells_dense.rds
-├── pca_pSVD.Rmd               # 分析报告
+├── pca_pSVD.Rmd                # Benchmark report
+├── pca_pSVD_1.Rmd              # Analysis with scree plots
 └── README.md
 ```
 
-## 测试覆盖
+## Test Coverage
 
-- ✅ 基本功能测试
-- ✅ 与 prcomp 对比
-- ✅ 与 mixOmics::pca 对比
-- ✅ 符号不变性处理
-- ✅ 跨平台数值稳定性
-- ✅ 边缘情况处理
+- ✅ Basic functionality and output validation
+- ✅ Comparison with `prcomp` and `mixOmics::pca`
+- ✅ Sparse matrix support
+- ✅ Edge cases (wide/tall matrices, zero-variance)
+- ✅ Multilevel/repeated measures
+- ✅ Cross-platform numerical stability
 
-## 作者
-
-Kim-Anh Lê Cao & Saritha Kodikara
-
-## 许可
-
-MIT License
+See `pca_pSVD.Rmd` for detailed benchmarks.

@@ -48,7 +48,7 @@ jobs:
       - name: Install R dependencies
         run: |
           install.packages(c("testthat", "ggplot2", "dplyr", "tidyr", "knitr"))
-          install.packages(c("remotes", "rcmdcheck"))
+          install.packages(c("remotes", "rcmdcheck", "xml2"))
         shell: Rscript {0}
 
       # Optional packages - allowed to fail
