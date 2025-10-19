@@ -82,7 +82,11 @@ jobs:
           cat("\n=== Running test-pca_pSVD.R ===\n")
           test_results <- test_file(
             "test/testthat/test-pca_pSVD.R",
-            reporter = c("progress", "fail"),
+            reporter = MultiReporter$new(reporters = list(
+              ProgressReporter$new(),
+              FailReporter$new(),
+              JunitReporter$new(file = "test-results.xml")
+            )),
             stop_on_failure = FALSE
           )
 
@@ -108,7 +112,7 @@ jobs:
 
       # Run benchmark
       # - name: Run benchmark
-      #   if: runner.os == 'Linux' # 只在 Linux 上运行,节省时间
+      #   if: runner.os == 'Linux'
       #   continue-on-error: true
       #   run: |
       #     if (file.exists("pca_pSVD.Rmd")) {
