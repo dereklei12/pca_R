@@ -105,12 +105,16 @@ jobs:
 
           # Run test-pca_pSVD.R only
           cat("\n=== Running test-pca_pSVD.R ===\n")
+
+          # Define summary output file
+          summary_file <- file.path(test_results_dir, paste0("summary-", os_name, "-", r_version, ".txt"))
+
           test_results <- test_file(
             "test/testthat/test-pca_pSVD.R",
             reporter = MultiReporter$new(reporters = list(
               ProgressReporter$new(),
               FailReporter$new(),
-              JunitReporter$new(file = output_file)
+              SummaryReporter$new(file = summary_file)
             )),
             stop_on_failure = FALSE
           )
@@ -166,11 +170,12 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Add test results for ${{ matrix.config.os }} (R-${{ matrix.config.r }})"
-          file_pattern: "test/testthat/test-results/*.xml"
+          file_pattern: "test/testthat/test-results/*.txt"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
           commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
           skip_dirty_check: false
+          pull: "--rebase --autostash"
 
       # Run benchmark
       # - name: Run benchmark
