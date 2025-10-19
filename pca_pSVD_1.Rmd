@@ -463,6 +463,8 @@ All tests passed successfully, confirming that `pca_pSVD` is robust, reliable, a
 
 -   Speedup depends on hardware, BLAS implementation, and data sparsity.
 
+-   For this dataset, multilevel analysis was not performed (multilevel = NULL) and logratio transformation was set to "none". These parameter choices prioritize computational efficiency comparison rather than biological interpretation.
+
 -   Both methods were executed with identical preprocessing (center = TRUE, scale = TRUE) and a fixed random seed for reproducibility.
 
 # 9. Session Info
