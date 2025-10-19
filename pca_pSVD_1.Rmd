@@ -435,7 +435,7 @@ This report compares **full PCA** (via mixOmics::pca) and **partial PCA** (pca_p
 
 ## Compatibility Test
 
-To ensure `pca_pSVD` produces reliable and consistent results across different platforms and environments, a test suite was developed using the `testthat` framework. The complete test file is available at: [test-pca_pSVD.R](https://github.com/dereklei12/pca_R/blob/main/test/testthat/test-pca_pSVD.R).
+To ensure [`pca_pSVD`](https://github.com/dereklei12/pca_R/blob/main/R/pca_pSVD.R) produces reliable and consistent results across different platforms and environments, a test suite was developed using the `testthat` framework. The complete test file is available at: [test-pca_pSVD.R](https://github.com/dereklei12/pca_R/blob/main/test/testthat/test-pca_pSVD.R).
 
 The test suite validates the following scenarios:
 

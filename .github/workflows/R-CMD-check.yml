@@ -135,13 +135,14 @@ jobs:
 
       - name: Commit test results
         if: always()
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add test-results/ || true
-          git commit -m "Add test results for ${{ matrix.config.os }} (R-${{ matrix.config.r }})" || echo "No changes to commit"
-          git pull --rebase
-          git push || echo "Push failed, may need manual intervention"
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Add test results for ${{ matrix.config.os }} (R-${{ matrix.config.r }})"
+          file_pattern: "test-results/*.xml"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          skip_dirty_check: false
 
       # Run benchmark
       # - name: Run benchmark
