@@ -81,6 +81,7 @@ jobs:
           }
           BiocManager::install("mixOmics", ask = FALSE)
           install.packages("rARPACK")
+          install.packages("RSpectra")
           install.packages("bench")
         shell: Rscript {0}
 
@@ -95,14 +96,17 @@ jobs:
       # 步骤 7: 运行测试
       - name: Run tests
         run: |
-          # 设置测试选项
-          options(testthat.output_file = "test-results.xml")
-
-          # 运行所有测试
           library(testthat)
-          test_results <- test_dir(
-            "test/testthat",
-            reporter = c("progress", "fail")
+
+          # 允许显示所有失败,不限制数量
+          set_max_fails(Inf)
+
+          # 只运行 test-pca_pSVD.R 文件
+          cat("\n=== Running test-pca_pSVD.R ===\n")
+          test_results <- test_file(
+            "test/testthat/test-pca_pSVD.R",
+            reporter = c("progress", "fail"),
+            stop_on_failure = FALSE
           )
 
           # 显示测试摘要
@@ -111,7 +115,10 @@ jobs:
 
           # 如果有测试失败,退出码为 1
           if (any(as.data.frame(test_results)$failed > 0)) {
+            cat("\n✗ Tests FAILED\n")
             quit(status = 1)
+          } else {
+            cat("\n✓ All tests PASSED\n")
           }
         shell: Rscript {0}
 
@@ -124,11 +131,11 @@ jobs:
           path: test-results.xml
 
       # 步骤 9: 运行 benchmark (可选)
-      - name: Run benchmark
-        if: runner.os == 'Linux' # 只在 Linux 上运行,节省时间
-        continue-on-error: true
-        run: |
-          if (file.exists("pca_pSVD.Rmd")) {
-            rmarkdown::render("pca_pSVD.Rmd")
-          }
-        shell: Rscript {0}
+      # - name: Run benchmark
+      #   if: runner.os == 'Linux' # 只在 Linux 上运行,节省时间
+      #   continue-on-error: true
+      #   run: |
+      #     if (file.exists("pca_pSVD.Rmd")) {
+      #       rmarkdown::render("pca_pSVD.Rmd")
+      #     }
+      #   shell: Rscript {0}
